@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: cacs-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      # Add these in Render dashboard:
+      # - MONGODB_URI
+      # - JWT_SECRET
+      # - EMAIL_SERVICE
+      # - EMAIL_USER
+      # - EMAIL_PASS
+      # - ADMIN_EMAIL (optional)
+
