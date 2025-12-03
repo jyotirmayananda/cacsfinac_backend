@@ -10,10 +10,11 @@ services:
       - key: PORT
         value: 5000
       # Add these in Render dashboard:
-      # - MONGODB_URI
-      # - JWT_SECRET
-      # - EMAIL_SERVICE
-      # - EMAIL_USER
-      # - EMAIL_PASS
+      # - MONGODB_URI (required)
+      # - JWT_SECRET (required)
+      # - FRONTEND_URL (required for CORS - e.g., https://cacsfinaccservices.com)
+      # - EMAIL_SERVICE (optional)
+      # - EMAIL_USER (optional)
+      # - EMAIL_PASS (optional)
       # - ADMIN_EMAIL (optional)
 
