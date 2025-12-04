@@ -35,10 +35,17 @@ const corsOptions = {
       process.env.FRONTEND_URL, // Environment variable for frontend URL
     ].filter(Boolean); // Remove undefined values
     
+    // Log CORS requests for debugging
+    if (isProduction) {
+      console.log(`🌐 CORS check - Origin: ${origin}, Allowed: ${allowedOrigins.join(', ')}`);
+    }
+    
+    // Allow if origin is in allowed list, or if not in production (dev mode)
     if (allowedOrigins.includes(origin) || !isProduction) {
       callback(null, true);
     } else {
       console.warn(`⚠️  CORS blocked origin: ${origin}`);
+      console.warn(`💡 Allowed origins: ${allowedOrigins.join(', ')}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
