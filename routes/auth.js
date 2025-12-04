@@ -19,6 +19,17 @@ router.post('/signup', async (req, res) => {
       });
     }
 
+    // Check MongoDB connection
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      console.error('❌ MongoDB not connected. State:', mongoose.connection.readyState);
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection unavailable. Please try again later.',
+        error: 'MongoDB not connected'
+      });
+    }
+
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
@@ -77,6 +88,27 @@ router.post('/signin', async (req, res) => {
       });
     }
 
+    // Check MongoDB connection
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      console.error('❌ MongoDB not connected. State:', mongoose.connection.readyState);
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection unavailable. Please try again later.',
+        error: 'MongoDB not connected'
+      });
+    }
+
+    // Check JWT_SECRET
+    if (!process.env.JWT_SECRET) {
+      console.error('❌ JWT_SECRET not set in environment variables');
+      return res.status(500).json({
+        success: false,
+        message: 'Server configuration error',
+        error: 'JWT_SECRET not configured'
+      });
+    }
+
     // Find user
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
@@ -98,7 +130,7 @@ router.post('/signin', async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { userId: user._id, email: user.email },
-      process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+      process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
@@ -113,11 +145,12 @@ router.post('/signin', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Signin error:', error);
+    console.error('❌ Signin error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'An error occurred during sign in',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });
