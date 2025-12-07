@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const User = require('../models/User');
 const { sendWelcomeEmail } = require('../services/emailService');
 const authMiddleware = require('../middleware/authMiddleware');
+const adminMiddleware = require('../middleware/adminMiddleware');
 
 // Sign Up
 router.post('/signup', async (req, res) => {
@@ -141,7 +142,8 @@ router.post('/signin', async (req, res) => {
       user: {
         id: user._id,
         fullName: user.fullName,
-        email: user.email
+        email: user.email,
+        isAdmin: user.isAdmin || false
       }
     });
   } catch (error) {
@@ -155,8 +157,96 @@ router.post('/signin', async (req, res) => {
   }
 });
 
-// Get all users
-router.get('/users', authMiddleware, async (req, res) => {
+// Admin Login - Only allows admin users
+router.post('/admin/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validation
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide both email and password'
+      });
+    }
+
+    // Check MongoDB connection
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      console.error('❌ MongoDB not connected. State:', mongoose.connection.readyState);
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection unavailable. Please try again later.',
+        error: 'MongoDB not connected'
+      });
+    }
+
+    // Check JWT_SECRET
+    if (!process.env.JWT_SECRET) {
+      console.error('❌ JWT_SECRET not set in environment variables');
+      return res.status(500).json({
+        success: false,
+        message: 'Server configuration error',
+        error: 'JWT_SECRET not configured'
+      });
+    }
+
+    // Find user
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Check if user is admin
+    if (!user.isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    // Compare password
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, isAdmin: true },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      success: true,
+      message: 'Admin login successful',
+      token,
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        isAdmin: true
+      }
+    });
+  } catch (error) {
+    console.error('❌ Admin login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred during admin login',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
+
+// Get all users (Admin only)
+router.get('/users', adminMiddleware, async (req, res) => {
     try {
         const users = await User.find().select('-password');
         res.json(users);

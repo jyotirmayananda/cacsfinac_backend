@@ -3,6 +3,7 @@ const router = express.Router();
 const FormSubmission = require('../models/FormSubmission');
 const { sendFormThankYouEmail, sendEmail } = require('../services/emailService');
 const authMiddleware = require('../middleware/authMiddleware');
+const adminMiddleware = require('../middleware/adminMiddleware');
 
 // Submit contact/quote form
 router.post('/submit', async (req, res) => {
@@ -100,8 +101,8 @@ router.post('/submit', async (req, res) => {
   }
 });
 
-// Get all form submissions (optional - for admin use)
-router.get('/submissions', authMiddleware, async (req, res) => {
+// Get all form submissions (Admin only)
+router.get('/submissions', adminMiddleware, async (req, res) => {
   try {
     const submissions = await FormSubmission.find()
       .sort({ createdAt: -1 });
@@ -120,8 +121,8 @@ router.get('/submissions', authMiddleware, async (req, res) => {
   }
 });
 
-// Get single form submission
-router.get('/submissions/:id', authMiddleware, async (req, res) => {
+// Get single form submission (Admin only)
+router.get('/submissions/:id', adminMiddleware, async (req, res) => {
     try {
         const submission = await FormSubmission.findById(req.params.id);
         if (!submission) {
@@ -137,8 +138,8 @@ router.get('/submissions/:id', authMiddleware, async (req, res) => {
     }
 });
 
-// Update form submission
-router.put('/submissions/:id', authMiddleware, async (req, res) => {
+// Update form submission (Admin only)
+router.put('/submissions/:id', adminMiddleware, async (req, res) => {
     try {
         const submission = await FormSubmission.findByIdAndUpdate(req.params.id, req.body, {
             new: true,
@@ -156,24 +157,34 @@ router.put('/submissions/:id', authMiddleware, async (req, res) => {
     }
 });
 
-// Delete form submission
-router.delete('/submissions/:id', authMiddleware, async (req, res) => {
+// Delete form submission (Admin only)
+router.delete('/submissions/:id', adminMiddleware, async (req, res) => {
     try {
-        const submission = await FormSubmission.findById(req.params.id);
+        const submission = await FormSubmission.findByIdAndDelete(req.params.id);
 
         if (!submission) {
-            return res.status(404).json({ msg: 'Submission not found' });
+            return res.status(404).json({ 
+                success: false,
+                msg: 'Submission not found' 
+            });
         }
 
-        await submission.remove();
-
-        res.json({ msg: 'Submission removed' });
+        res.json({ 
+            success: true,
+            msg: 'Submission removed' 
+        });
     } catch (err) {
-        console.error(err.message);
+        console.error('Delete submission error:', err);
         if (err.kind === 'ObjectId') {
-            return res.status(404).json({ msg: 'Submission not found' });
+            return res.status(404).json({ 
+                success: false,
+                msg: 'Submission not found' 
+            });
         }
-        res.status(500).send('Server Error');
+        res.status(500).json({
+            success: false,
+            msg: 'Server Error'
+        });
     }
 });
 
