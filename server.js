@@ -30,6 +30,7 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:9002', // Local development
       'http://localhost:3000', // Alternative local port
+      'http://localhost:3001', // Admin panel local
       'https://cacsfinaccservices.com', // Production frontend
       'https://www.cacsfinaccservices.com', // Production frontend with www
       process.env.FRONTEND_URL, // Environment variable for frontend URL
