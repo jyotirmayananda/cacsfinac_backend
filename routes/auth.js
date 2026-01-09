@@ -1,14 +1,15 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-const User = require('../models/User');
-const { sendWelcomeEmail } = require('../services/emailService');
-const authMiddleware = require('../middleware/authMiddleware');
-const adminMiddleware = require('../middleware/adminMiddleware');
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
+const User = require("../models/User");
+const Admin = require("../models/Admin");
+const { sendWelcomeEmail } = require("../services/emailService");
+const authMiddleware = require("../middleware/authMiddleware");
+const adminMiddleware = require("../middleware/adminMiddleware");
 
 // Sign Up
-router.post('/signup', async (req, res) => {
+router.post("/signup", async (req, res) => {
   try {
     const { fullName, email, password } = req.body;
 
@@ -16,18 +17,22 @@ router.post('/signup', async (req, res) => {
     if (!fullName || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields: fullName, email, and password'
+        message:
+          "Please provide all required fields: fullName, email, and password",
       });
     }
 
     // Check MongoDB connection
-    const mongoose = require('mongoose');
+    const mongoose = require("mongoose");
     if (mongoose.connection.readyState !== 1) {
-      console.error('❌ MongoDB not connected. State:', mongoose.connection.readyState);
+      console.error(
+        "❌ MongoDB not connected. State:",
+        mongoose.connection.readyState
+      );
       return res.status(503).json({
         success: false,
-        message: 'Database connection unavailable. Please try again later.',
-        error: 'MongoDB not connected'
+        message: "Database connection unavailable. Please try again later.",
+        error: "MongoDB not connected",
       });
     }
 
@@ -36,7 +41,7 @@ router.post('/signup', async (req, res) => {
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        message: 'User already exists with this email'
+        message: "User already exists with this email",
       });
     }
 
@@ -44,7 +49,7 @@ router.post('/signup', async (req, res) => {
     const user = new User({
       fullName,
       email: email.toLowerCase(),
-      password
+      password,
     });
 
     await user.save();
@@ -53,31 +58,31 @@ router.post('/signup', async (req, res) => {
     try {
       await sendWelcomeEmail(fullName, email);
     } catch (emailError) {
-      console.error('Error sending welcome email:', emailError);
+      console.error("Error sending welcome email:", emailError);
       // Don't fail the signup if email fails
     }
 
     res.status(201).json({
       success: true,
-      message: 'User created successfully. Welcome email sent!',
+      message: "User created successfully. Welcome email sent!",
       user: {
         id: user._id,
         fullName: user.fullName,
-        email: user.email
-      }
+        email: user.email,
+      },
     });
   } catch (error) {
-    console.error('Signup error:', error);
+    console.error("Signup error:", error);
     res.status(500).json({
       success: false,
-      message: 'An error occurred during signup',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: "An error occurred during signup",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 });
 
 // Sign In
-router.post('/signin', async (req, res) => {
+router.post("/signin", async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -85,28 +90,31 @@ router.post('/signin', async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide both email and password'
+        message: "Please provide both email and password",
       });
     }
 
     // Check MongoDB connection
-    const mongoose = require('mongoose');
+    const mongoose = require("mongoose");
     if (mongoose.connection.readyState !== 1) {
-      console.error('❌ MongoDB not connected. State:', mongoose.connection.readyState);
+      console.error(
+        "❌ MongoDB not connected. State:",
+        mongoose.connection.readyState
+      );
       return res.status(503).json({
         success: false,
-        message: 'Database connection unavailable. Please try again later.',
-        error: 'MongoDB not connected'
+        message: "Database connection unavailable. Please try again later.",
+        error: "MongoDB not connected",
       });
     }
 
     // Check JWT_SECRET
     if (!process.env.JWT_SECRET) {
-      console.error('❌ JWT_SECRET not set in environment variables');
+      console.error("❌ JWT_SECRET not set in environment variables");
       return res.status(500).json({
         success: false,
-        message: 'Server configuration error',
-        error: 'JWT_SECRET not configured'
+        message: "Server configuration error",
+        error: "JWT_SECRET not configured",
       });
     }
 
@@ -115,7 +123,7 @@ router.post('/signin', async (req, res) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: "Invalid credentials",
       });
     }
 
@@ -124,7 +132,7 @@ router.post('/signin', async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: "Invalid credentials",
       });
     }
 
@@ -132,200 +140,333 @@ router.post('/signin', async (req, res) => {
     const token = jwt.sign(
       { userId: user._id, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: "24h" }
     );
 
     res.json({
       success: true,
-      message: 'Sign in successful',
+      message: "Sign in successful",
       token,
       user: {
         id: user._id,
         fullName: user.fullName,
         email: user.email,
-        isAdmin: user.isAdmin || false
-      }
+        isAdmin: user.isAdmin || false,
+      },
     });
   } catch (error) {
-    console.error('❌ Signin error:', error);
-    console.error('Error stack:', error.stack);
+    console.error("❌ Signin error:", error);
+    console.error("Error stack:", error.stack);
     res.status(500).json({
       success: false,
-      message: 'An error occurred during sign in',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      message: "An error occurred during sign in",
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : "Internal server error",
     });
   }
 });
 
-// Admin Login - Only allows admin users
-router.post('/admin/login', async (req, res) => {
+// Admin public signup (create admin account)
+router.post("/admin/signup", async (req, res) => {
+  try {
+    const { fullName, email, password } = req.body;
+
+    if (!fullName || !email || !password) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Please provide fullName, email and password",
+        });
+    }
+
+    if (password.length < 6) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Password must be at least 6 characters",
+        });
+    }
+
+    const mongoose = require("mongoose");
+    if (mongoose.connection.readyState !== 1) {
+      return res
+        .status(503)
+        .json({ success: false, message: "Database connection unavailable" });
+    }
+
+    const existingAdmin = await Admin.findOne({ email: email.toLowerCase() });
+    if (existingAdmin) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Admin already exists with this email",
+        });
+    }
+
+    const admin = new Admin({ fullName, email: email.toLowerCase(), password });
+    await admin.save();
+
+    res
+      .status(201)
+      .json({
+        success: true,
+        message: "Admin created successfully",
+        admin: { id: admin._id, fullName: admin.fullName, email: admin.email },
+      });
+  } catch (error) {
+    console.error("Admin signup error:", error);
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "An error occurred during admin signup",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+  }
+});
+
+// Admin Login - authenticates against Admin collection
+router.post("/admin/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validation
     if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide both email and password'
-      });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Please provide both email and password",
+        });
     }
 
-    // Check MongoDB connection
-    const mongoose = require('mongoose');
+    const mongoose = require("mongoose");
     if (mongoose.connection.readyState !== 1) {
-      console.error('❌ MongoDB not connected. State:', mongoose.connection.readyState);
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection unavailable. Please try again later.',
-        error: 'MongoDB not connected'
-      });
+      return res
+        .status(503)
+        .json({
+          success: false,
+          message: "Database connection unavailable. Please try again later.",
+        });
     }
 
-    // Check JWT_SECRET
     if (!process.env.JWT_SECRET) {
-      console.error('❌ JWT_SECRET not set in environment variables');
-      return res.status(500).json({
-        success: false,
-        message: 'Server configuration error',
-        error: 'JWT_SECRET not configured'
-      });
+      console.error("❌ JWT_SECRET not set in environment variables");
+      return res
+        .status(500)
+        .json({ success: false, message: "Server configuration error" });
     }
 
-    // Find user
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
+    const admin = await Admin.findOne({ email: email.toLowerCase() });
+    if (!admin)
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials" });
 
-    // Check if user is admin
-    if (!user.isAdmin) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Admin privileges required.'
-      });
-    }
+    const isPasswordValid = await admin.comparePassword(password);
+    if (!isPasswordValid)
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials" });
 
-    // Compare password
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
-
-    // Generate JWT token
     const token = jwt.sign(
-      { userId: user._id, email: user.email, isAdmin: true },
+      { adminId: admin._id, email: admin.email, isAdmin: true },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: "24h" }
     );
 
     res.json({
       success: true,
-      message: 'Admin login successful',
+      message: "Admin login successful",
       token,
       user: {
-        id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        isAdmin: true
-      }
+        id: admin._id,
+        fullName: admin.fullName,
+        email: admin.email,
+        isAdmin: true,
+      },
     });
   } catch (error) {
-    console.error('❌ Admin login error:', error);
+    console.error("❌ Admin login error:", error);
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "An error occurred during admin login",
+        error:
+          process.env.NODE_ENV === "development"
+            ? error.message
+            : "Internal server error",
+      });
+  }
+});
+
+// Admin Registration - Only existing admins can create new admins
+// Requires authentication token from existing admin
+router.post("/admin/register", adminMiddleware, async (req, res) => {
+  try {
+    const { fullName, email, password } = req.body;
+
+    // Validation
+    if (!fullName || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Please provide all required fields: fullName, email, and password",
+      });
+    }
+
+    // Password validation
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters long",
+      });
+    }
+
+    // Check MongoDB connection
+    const mongoose = require("mongoose");
+    if (mongoose.connection.readyState !== 1) {
+      console.error(
+        "❌ MongoDB not connected. State:",
+        mongoose.connection.readyState
+      );
+      return res.status(503).json({
+        success: false,
+        message: "Database connection unavailable. Please try again later.",
+        error: "MongoDB not connected",
+      });
+    }
+
+    // Check if admin already exists
+    const existingAdmin = await Admin.findOne({ email: email.toLowerCase() });
+    if (existingAdmin) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Admin already exists with this email",
+        });
+    }
+
+    // Create new admin user
+    const adminUser = new Admin({
+      fullName,
+      email: email.toLowerCase(),
+      password,
+    });
+    await adminUser.save();
+
+    res
+      .status(201)
+      .json({
+        success: true,
+        message: "Admin user created successfully",
+        user: {
+          id: adminUser._id,
+          fullName: adminUser.fullName,
+          email: adminUser.email,
+          isAdmin: true,
+        },
+      });
+  } catch (error) {
+    console.error("❌ Admin registration error:", error);
     res.status(500).json({
       success: false,
-      message: 'An error occurred during admin login',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      message: "An error occurred during admin registration",
+      error:
+        process.env.NODE_ENV === "development"
+          ? error.message
+          : "Internal server error",
     });
   }
 });
 
 // Get all users (Admin only)
-router.get('/users', adminMiddleware, async (req, res) => {
-    try {
-        const users = await User.find().select('-password');
-        res.json(users);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
+router.get("/users", adminMiddleware, async (req, res) => {
+  try {
+    const users = await User.find().select("-password");
+    res.json(users);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
 });
 
 // Get user by ID
-router.get('/users/:id', authMiddleware, async (req, res) => {
-    try {
-        const user = await User.findById(req.params.id).select('-password');
-        if (!user) {
-            return res.status(404).json({ msg: 'User not found' });
-        }
-        res.json(user);
-    } catch (err) {
-        console.error(err.message);
-        if (err.kind === 'ObjectId') {
-            return res.status(404).json({ msg: 'User not found' });
-        }
-        res.status(500).send('Server Error');
+router.get("/users/:id", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
     }
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    if (err.kind === "ObjectId") {
+      return res.status(404).json({ msg: "User not found" });
+    }
+    res.status(500).send("Server Error");
+  }
 });
 
 // Update user
-router.put('/users/:id', authMiddleware, async (req, res) => {
-    const { fullName, email, password } = req.body;
+router.put("/users/:id", authMiddleware, async (req, res) => {
+  const { fullName, email, password } = req.body;
 
-    // Build user object
-    const userFields = {};
-    if (fullName) userFields.fullName = fullName;
-    if (email) userFields.email = email;
-    if (password) {
-        const salt = await bcrypt.genSalt(10);
-        userFields.password = await bcrypt.hash(password, salt);
+  // Build user object
+  const userFields = {};
+  if (fullName) userFields.fullName = fullName;
+  if (email) userFields.email = email;
+  if (password) {
+    const salt = await bcrypt.genSalt(10);
+    userFields.password = await bcrypt.hash(password, salt);
+  }
+
+  try {
+    let user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
     }
 
-    try {
-        let user = await User.findById(req.params.id);
+    user = await User.findByIdAndUpdate(
+      req.params.id,
+      { $set: userFields },
+      { new: true }
+    ).select("-password");
 
-        if (!user) {
-            return res.status(404).json({ msg: 'User not found' });
-        }
-
-        user = await User.findByIdAndUpdate(
-            req.params.id,
-            { $set: userFields },
-            { new: true }
-        ).select('-password');
-
-        res.json(user);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
 });
 
 // Delete user
-router.delete('/users/:id', authMiddleware, async (req, res) => {
-    try {
-        const user = await User.findById(req.params.id);
+router.delete("/users/:id", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
 
-        if (!user) {
-            return res.status(404).json({ msg: 'User not found' });
-        }
-
-        await user.remove();
-
-        res.json({ msg: 'User removed' });
-    } catch (err) {
-        console.error(err.message);
-        if (err.kind === 'ObjectId') {
-            return res.status(404).json({ msg: 'User not found' });
-        }
-        res.status(500).send('Server Error');
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
     }
-});
 
+    await user.remove();
+
+    res.json({ msg: "User removed" });
+  } catch (err) {
+    console.error(err.message);
+    if (err.kind === "ObjectId") {
+      return res.status(404).json({ msg: "User not found" });
+    }
+    res.status(500).send("Server Error");
+  }
+});
 
 module.exports = router;
