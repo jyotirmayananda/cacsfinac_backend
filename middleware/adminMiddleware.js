@@ -2,14 +2,21 @@ const jwt = require("jsonwebtoken");
 const Admin = require("../models/Admin");
 
 module.exports = async function (req, res, next) {
-  // Get token from header
-  const token = req.header("x-auth-token");
+  // Get token from headers - support both x-auth-token and Authorization: Bearer
+  let token = req.header("x-auth-token");
+
+  if (!token && req.header("Authorization")) {
+    const authHeader = req.header("Authorization");
+    if (authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
+    }
+  }
 
   // Check if not token
   if (!token) {
     return res.status(401).json({
       success: false,
-      msg: "No token, authorization denied",
+      message: "No token, authorization denied",
     });
   }
 
@@ -26,7 +33,7 @@ module.exports = async function (req, res, next) {
     if (!admin) {
       return res.status(401).json({
         success: false,
-        msg: "Admin not found",
+        message: "Admin access denied: account not found",
       });
     }
 
@@ -36,7 +43,7 @@ module.exports = async function (req, res, next) {
   } catch (err) {
     res.status(401).json({
       success: false,
-      msg: "Token is not valid",
+      message: "Token is not valid or expired",
     });
   }
 };

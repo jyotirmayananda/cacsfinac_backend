@@ -12,7 +12,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 if (isProduction) {
   const requiredVars = ['MONGODB_URI', 'JWT_SECRET'];
   const missingVars = requiredVars.filter(varName => !process.env[varName]);
-  
+
   if (missingVars.length > 0) {
     console.error('❌ Missing required environment variables:', missingVars.join(', '));
     console.error('💡 Please set these in your Render dashboard → Environment');
@@ -20,13 +20,21 @@ if (isProduction) {
   }
 }
 
+// Request logging middleware for debugging
+app.use((req, res, next) => {
+  if (!isProduction) {
+    console.log(`📡 ${req.method} ${req.url}`);
+  }
+  next();
+});
+
 // Middleware
 // CORS configuration - Allow frontend to connect
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     const allowedOrigins = [
       'http://localhost:9002', // Local development
       'http://localhost:3000', // Alternative local port
@@ -35,12 +43,12 @@ const corsOptions = {
       'https://www.cacsfinaccservices.com', // Production frontend with www
       process.env.FRONTEND_URL, // Environment variable for frontend URL
     ].filter(Boolean); // Remove undefined values
-    
+
     // Log CORS requests for debugging
     if (isProduction) {
       console.log(`🌐 CORS check - Origin: ${origin}, Allowed: ${allowedOrigins.join(', ')}`);
     }
-    
+
     // Allow if origin is in allowed list, or if not in production (dev mode)
     if (allowedOrigins.includes(origin) || !isProduction) {
       callback(null, true);
@@ -131,8 +139,8 @@ app.get('/health', (req, res) => {
     2: 'connecting',
     3: 'disconnecting'
   };
-  
-  res.json({ 
+
+  res.json({
     status: dbStatus === 1 ? 'OK' : 'WARNING',
     message: 'Server is running',
     database: dbStates[dbStatus] || 'unknown',
@@ -143,16 +151,28 @@ app.get('/health', (req, res) => {
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.json({ message: 'CACS Backend API' });
+  res.json({
+    success: true,
+    message: 'CACS Backend API is running',
+    version: '1.0.0'
+  });
+});
+
+// Catch-all route for undefined routes (404)
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.originalUrl}. Please check the URL and method.`
+  });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ 
-    success: false, 
-    message: 'Something went wrong!', 
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined 
+  res.status(500).json({
+    success: false,
+    message: 'Something went wrong!',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 

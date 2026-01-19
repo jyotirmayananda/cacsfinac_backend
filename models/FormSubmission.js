@@ -50,7 +50,7 @@ const formSubmissionSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
-});
+}, { collection: 'formsubmissions' });
 
-module.exports = mongoose.model('FormSubmission', formSubmissionSchema);
+module.exports = mongoose.model('FormSubmission', formSubmissionSchema, 'formsubmissions');
 
